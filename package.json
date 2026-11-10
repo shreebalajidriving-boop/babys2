@@ -4,18 +4,18 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "expo start",
-    "web": "expo start --web",
-    "build:web": "expo export --platform web",
-    "serve:web": "serve -s dist -l 3000",
-    "pm2:start": "pm2 start ecosystem.config.cjs",
-    "pm2:stop": "pm2 stop nsg-web",
-    "pm2:restart": "pm2 restart nsg-web",
-    "pm2:delete": "pm2 delete nsg-web",
-    "pm2:logs": "pm2 logs nsg-web",
-    "pm2:status": "pm2 status",
-    "deploy:web": "npm run build:web && pm2 startOrReload ecosystem.config.cjs",
-    "lint": "expo lint",
+    "dev": "npx expo start",
+    "web": "npx expo start --web",
+    "build:web": "npx expo export --platform web",
+    "serve:web": "npx serve -s dist -l 3000",
+    "pm2:start": "npx pm2 start ecosystem.config.cjs",
+    "pm2:stop": "npx pm2 stop nsg-web",
+    "pm2:restart": "npx pm2 restart nsg-web",
+    "pm2:delete": "npx pm2 delete nsg-web",
+    "pm2:logs": "npx pm2 logs nsg-web",
+    "pm2:status": "npx pm2 status",
+    "deploy:web": "npm run build:web && npx pm2 startOrReload ecosystem.config.cjs --update-env",
+    "lint": "npx expo lint",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -40,6 +40,7 @@
     "expo-system-ui": "~57.0.4",
     "expo-web-browser": "~57.0.3",
     "lucide-react-native": "^0.544.0",
+    "pm2": "^6.0.14",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-native": "0.86.3",
@@ -51,13 +52,12 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.21.2",
     "react-native-webview": "13.16.1",
-    "react-native-worklets": "0.10.1"
+    "react-native-worklets": "0.10.1",
+    "serve": "^14.2.7"
   },
   "devDependencies": {
     "@babel/core": "^7.29.0",
     "@types/react": "~19.2.4",
-    "pm2": "^6.0.14",
-    "serve": "^14.2.7",
     "typescript": "~6.0.3"
   }
 }
