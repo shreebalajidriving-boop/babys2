@@ -9,6 +9,7 @@ import { formatINR, discountPercent } from '@/lib/format';
 import { FONT, type Palette } from '@/lib/theme';
 import { FilterChips } from '@/components/FilterChips';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
 
 type Category = 'all' | LabTest['category'];
 const CATEGORIES: { value: Category; label: string }[] = [
@@ -23,12 +24,19 @@ export default function LabListingScreen() {
   const { theme } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [category, setCategory] = useState<Category>('all');
-  const tests = LAB_TESTS.filter((t) => category === 'all' || t.category === category);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const tests = LAB_TESTS.filter(
+    (t) =>
+      (category === 'all' || t.category === category) &&
+      (!q || t.name.toLowerCase().includes(q) || t.category.toLowerCase().includes(q) || t.sample.toLowerCase().includes(q)),
+  );
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Lab tests" />
       <View style={styles.filters}>
+        <SearchField value={query} onChangeText={setQuery} placeholder="Search lab test or sample type" />
         <FilterChips options={CATEGORIES} value={category} onChange={setCategory} />
       </View>
       <FlatList
@@ -73,7 +81,7 @@ export default function LabListingScreen() {
 function makeStyles(t: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
-    filters: { paddingHorizontal: 20, paddingBottom: 12 },
+    filters: { paddingHorizontal: 20, paddingBottom: 12, gap: 10 },
     list: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
     banner: {
       flexDirection: 'row',

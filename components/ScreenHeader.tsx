@@ -3,7 +3,7 @@ import { ArrowLeft } from 'lucide-react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/lib/AppContext';
-import { FONT } from '@/lib/theme';
+import { FONT, RADIUS, SPACE } from '@/lib/theme';
 
 export function ScreenHeader({
   title,
@@ -22,13 +22,17 @@ export function ScreenHeader({
   };
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { borderBottomColor: theme.border }]}>
       <Pressable
         onPress={goBack}
         accessibilityLabel="Go back"
-        style={({ pressed }) => [styles.button, { backgroundColor: theme.card }, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.button,
+          { backgroundColor: theme.card, borderColor: theme.border },
+          pressed && styles.pressed,
+        ]}
       >
-        <ArrowLeft size={22} color={theme.ink} />
+        <ArrowLeft size={20} color={theme.ink} />
       </Pressable>
       <Text style={[styles.title, { color: theme.ink }]} numberOfLines={1}>
         {title}
@@ -42,27 +46,26 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 8,
-    gap: 12,
+    paddingHorizontal: SPACE.pageX,
+    paddingTop: SPACE.sm,
+    paddingBottom: SPACE.md,
+    gap: SPACE.md,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   button: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 42,
+    height: 42,
+    borderRadius: RADIUS.pill,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    borderWidth: 1,
   },
   pressed: { opacity: 0.7 },
   title: {
     flex: 1,
     fontFamily: FONT.bold,
     fontSize: 18,
+    letterSpacing: -0.2,
   },
-  right: { minWidth: 44, alignItems: 'flex-end' },
+  right: { minWidth: 42, alignItems: 'flex-end' },
 });

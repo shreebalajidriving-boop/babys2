@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/lib/AppContext';
 import { formatINR, discountPercent } from '@/lib/format';
-import { FONT, type Palette } from '@/lib/theme';
+import { FONT, RADIUS, type Palette } from '@/lib/theme';
 import { useToast } from '@/components/Toast';
 import type { Product } from '@/lib/catalog';
 
@@ -73,33 +73,33 @@ function makeStyles(t: Palette) {
   return StyleSheet.create({
     card: {
       backgroundColor: t.card,
-      borderRadius: 18,
+      borderRadius: RADIUS.lg,
       overflow: 'hidden',
       borderWidth: 1,
       borderColor: t.border,
     },
-    pressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
-    imageWrap: { height: 150, backgroundColor: t.secondary },
+    pressed: { opacity: 0.92, transform: [{ scale: 0.985 }] },
+    imageWrap: { height: 140, backgroundColor: t.secondary },
     image: { width: '100%', height: '100%' },
     heart: {
       position: 'absolute',
       top: 8,
       right: 8,
-      width: 32,
-      height: 32,
-      borderRadius: 16,
-      backgroundColor: '#FFFFFF',
+      width: 30,
+      height: 30,
+      borderRadius: 15,
+      backgroundColor: 'rgba(255,255,255,0.95)',
       alignItems: 'center',
       justifyContent: 'center',
     },
-    body: { padding: 12, gap: 4 },
-    brand: { fontFamily: FONT.semibold, fontSize: 12, color: t.muted },
-    name: { fontFamily: FONT.semibold, fontSize: 14, color: t.ink, minHeight: 36, lineHeight: 18 },
+    body: { padding: 11, gap: 3 },
+    brand: { fontFamily: FONT.semibold, fontSize: 11, color: t.muted, textTransform: 'uppercase', letterSpacing: 0.4 },
+    name: { fontFamily: FONT.semibold, fontSize: 13, color: t.ink, minHeight: 34, lineHeight: 17 },
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     ratingText: { fontFamily: FONT.semibold, fontSize: 12, color: t.muted },
     priceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 },
-    price: { fontFamily: FONT.bold, fontSize: 16, color: t.ink },
-    mrp: { fontFamily: FONT.regular, fontSize: 12, color: t.muted, textDecorationLine: 'line-through' },
+    price: { fontFamily: FONT.bold, fontSize: 15, color: t.ink },
+    mrp: { fontFamily: FONT.regular, fontSize: 11, color: t.muted, textDecorationLine: 'line-through' },
     bottomRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -111,12 +111,13 @@ function makeStyles(t: Palette) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: 4,
-      paddingHorizontal: 12,
+      paddingHorizontal: 10,
       paddingVertical: 6,
-      borderRadius: 10,
+      borderRadius: RADIUS.sm,
       borderWidth: 1.5,
       borderColor: t.strong,
+      backgroundColor: t.secondary,
     },
-    addText: { fontFamily: FONT.bold, fontSize: 13, color: t.strong },
+    addText: { fontFamily: FONT.bold, fontSize: 12, color: t.strong },
   });
 }

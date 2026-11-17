@@ -1,5 +1,15 @@
 import type { ComponentType } from 'react';
-import { Apple, Armchair, Baby, Droplets, Heart, Milk, Puzzle, Shirt, Stethoscope } from 'lucide-react-native';
+import {
+  Baby,
+  Bath,
+  Blocks,
+  HeartPulse,
+  Milk,
+  Shirt,
+  Sofa,
+  Sparkles,
+  UtensilsCrossed,
+} from 'lucide-react-native';
 
 export type Category = {
   id: string;
@@ -30,13 +40,13 @@ const px = (id: string, ext = 'jpeg') =>
 export const CATEGORIES: Category[] = [
   { id: 'clothing', name: 'Baby Clothing', icon: Shirt },
   { id: 'diapers', name: 'Diapers & Wipes', icon: Baby },
-  { id: 'food', name: 'Baby Food & Nutrition', icon: Apple },
-  { id: 'bath', name: 'Bath & Skincare', icon: Droplets },
-  { id: 'healthcare', name: 'Baby Healthcare', icon: Stethoscope },
-  { id: 'toys', name: 'Toys & Accessories', icon: Puzzle },
+  { id: 'food', name: 'Baby Food & Nutrition', icon: UtensilsCrossed },
+  { id: 'bath', name: 'Bath & Skincare', icon: Bath },
+  { id: 'healthcare', name: 'Baby Healthcare', icon: HeartPulse },
+  { id: 'toys', name: 'Toys & Accessories', icon: Blocks },
   { id: 'feeding', name: 'Feeding Products', icon: Milk },
-  { id: 'furniture', name: 'Baby Furniture', icon: Armchair },
-  { id: 'momcare', name: 'Mom Care', icon: Heart },
+  { id: 'furniture', name: 'Baby Furniture', icon: Sofa },
+  { id: 'momcare', name: 'Mom Care', icon: Sparkles },
 ];
 
 export const PRODUCTS: Product[] = [

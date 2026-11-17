@@ -9,11 +9,15 @@ import {
   endTimeFor,
   getSitter,
   maxHoursFrom,
+  slotsForBand,
   SITTER_DURATIONS,
+  SITTER_PLAN_OPTIONS,
   SITTER_REQUIREMENTS,
-  SITTER_SLOTS,
+  SITTER_SLOT_BANDS,
   sitterTotal,
   type Sitter,
+  type SitterPlanOption,
+  type SitterSlotBand,
 } from '@/lib/sitters';
 import { FONT, type Palette } from '@/lib/theme';
 import type { PaymentMethod } from '@/lib/types';
@@ -65,6 +69,8 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
   const defaultAddress = addresses[0];
 
   const [step, setStep] = useState<Step>('schedule');
+  const [plan, setPlan] = useState<SitterPlanOption>('once');
+  const [slotBand, setSlotBand] = useState<SitterSlotBand>('morning');
   const [date, setDate] = useState(days[0].iso);
   const [startTime, setStartTime] = useState<string | null>(null);
   const [hours, setHours] = useState<number>(SITTER_DURATIONS[0]);
@@ -82,10 +88,12 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
   const bookedTimes = sitterBookings
     .filter((b) => b.status === 'confirmed' && b.sitterId === sitter.id && b.date === date)
     .map((b) => b.startTime);
-  const slots = openSlots(SITTER_SLOTS, sitter.id, date, bookedTimes);
+  const bandSlots = slotsForBand(slotBand);
+  const slots = openSlots(bandSlots, sitter.id, date, bookedTimes);
   const maxHours = startTime ? maxHoursFrom(startTime) : SITTER_DURATIONS[SITTER_DURATIONS.length - 1];
   const hourOptions = HOUR_OPTIONS.filter((option) => Number(option.value) <= maxHours);
-  const total = sitterTotal(sitter.hourlyRate, hours);
+  const total = sitterTotal(sitter.hourlyRate, hours, plan);
+  const planLabel = SITTER_PLAN_OPTIONS.find((item) => item.value === plan)?.label ?? 'One day';
   const stepIndex = STEPS.indexOf(step);
 
   useEffect(() => {
@@ -96,6 +104,8 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
         date,
         startTime,
         hours,
+        plan,
+        slotBand,
         childId: child.id,
         address: address.trim(),
         requirements,
@@ -149,6 +159,16 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
 
         {step === 'schedule' ? (
           <>
+            <FormSection title="Booking length">
+              <FilterChips
+                options={SITTER_PLAN_OPTIONS.map((item) => ({ value: item.value, label: item.label }))}
+                value={plan}
+                onChange={(value) => setPlan(value as SitterPlanOption)}
+              />
+              <Text style={styles.hint}>
+                {SITTER_PLAN_OPTIONS.find((item) => item.value === plan)?.hint}. Weekly and monthly use the same slot each day.
+              </Text>
+            </FormSection>
             <FormSection title="Choose a date">
               <DayPicker
                 value={date}
@@ -157,6 +177,17 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
                   setStartTime(null);
                 }}
               />
+            </FormSection>
+            <FormSection title="Time band">
+              <FilterChips
+                options={SITTER_SLOT_BANDS.map((band) => ({ value: band.value, label: band.label }))}
+                value={slotBand}
+                onChange={(value) => {
+                  setSlotBand(value as SitterSlotBand);
+                  setStartTime(null);
+                }}
+              />
+              <Text style={styles.hint}>{SITTER_SLOT_BANDS.find((band) => band.value === slotBand)?.hint}</Text>
             </FormSection>
             <FormSection title="Start time">
               <SlotGrid
@@ -170,7 +201,7 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
               />
               <Text style={styles.hint}>Greyed-out times are already booked with this sitter.</Text>
             </FormSection>
-            <FormSection title="How long do you need them?">
+            <FormSection title="Hours needed (2–6)">
               <FilterChips
                 options={hourOptions}
                 value={String(hours)}
@@ -178,7 +209,7 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
               />
               {startTime ? (
                 <Text style={styles.hint}>
-                  {startTime} to {endTimeFor(startTime, hours)}. Bookings must end by 11:00 PM.
+                  {startTime} to {endTimeFor(startTime, hours)}. Night slots end by 11:00 PM.
                 </Text>
               ) : null}
             </FormSection>
@@ -252,13 +283,15 @@ function BookingFlow({ sitter }: { sitter: Sitter }) {
           <>
             <FormSection title="Summary">
               <SummaryRow label="Sitter" value={sitter.name} />
-              <SummaryRow label="Date" value={formatIsoDate(date)} />
+              <SummaryRow label="Plan" value={planLabel} />
+              <SummaryRow label="Starts" value={formatIsoDate(date)} />
+              <SummaryRow label="Band" value={SITTER_SLOT_BANDS.find((band) => band.value === slotBand)?.label ?? '-'} />
               <SummaryRow label="Time" value={startTime ? `${startTime} to ${endTimeFor(startTime, hours)}` : '-'} />
-              <SummaryRow label="Duration" value={`${hours} hours`} />
+              <SummaryRow label="Hours / day" value={`${hours} hours`} />
               <SummaryRow label="Child" value={child?.name ?? '-'} />
               <SummaryRow label="Help with" value={requirements.length ? requirements.join(', ') : 'General care'} />
               <View style={styles.divider} />
-              <SummaryRow label={`${formatINR(sitter.hourlyRate)} x ${hours} hours`} value={formatINR(total)} />
+              <SummaryRow label={`${formatINR(sitter.hourlyRate)} x ${hours}h x ${planLabel}`} value={formatINR(total)} />
               <SummaryRow label="Total" value={formatINR(total)} bold />
             </FormSection>
             <FormSection title="Payment method">

@@ -5,10 +5,10 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/AppContext';
 import { FONT, type Palette } from '@/lib/theme';
+import { CITIES } from '@/lib/cities';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 
-const CITIES = ['Bengaluru', 'Mumbai', 'Delhi NCR', 'Hyderabad', 'Chennai', 'Pune'];
 const DEMO_OTP = '1234';
 
 type Step = 'city' | 'phone' | 'otp';

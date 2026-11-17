@@ -1,45 +1,162 @@
 import { router } from 'expo-router';
-import { Check, Circle, Clock } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { Check, Circle, Clock, Home, Hospital } from 'lucide-react-native';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/AppContext';
-import { formatIsoDate, toIsoDate } from '@/lib/schedule';
+import { formatINR } from '@/lib/format';
+import { dayOptions, formatIsoDate, openSlots, toIsoDate } from '@/lib/schedule';
 import { FONT, type Palette } from '@/lib/theme';
+import type { PaymentMethod, VaccinePlace } from '@/lib/types';
 import {
   ageLabel,
-  dueDateFor,
   parseBirthDate,
   VACCINE_DISCLAIMER,
+  VACCINE_SLOTS,
   VACCINES,
+  dueDateFor,
   vaccineStatus,
+  vaccineVisitFee,
   type Vaccine,
   type VaccineStatus,
 } from '@/lib/vaccines';
 import { EmptyState } from '@/components/EmptyState';
+import { FilterChips } from '@/components/FilterChips';
 import { PrimaryButton } from '@/components/PrimaryButton';
+import { DayPicker, SlotGrid } from '@/components/SchedulePickers';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
 import { useToast } from '@/components/Toast';
 
 type Row = { vaccine: Vaccine; dueIso: string; status: VaccineStatus };
 
+const PAYMENT_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: 'upi', label: 'UPI' },
+  { value: 'card', label: 'Card' },
+  { value: 'cod', label: 'Pay at visit' },
+];
+
 export default function VaccinesScreen() {
-  const { theme, children, activeChild, vaccinesGiven, setActiveChild, setChildBirthDate, toggleVaccineGiven } = useApp();
+  const {
+    theme,
+    children,
+    activeChild,
+    vaccinesGiven,
+    vaccineBookings,
+    setActiveChild,
+    setChildBirthDate,
+    toggleVaccineGiven,
+    bookVaccine,
+  } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const showToast = useToast();
   const [selectedId, setSelectedId] = useState<string | null>(activeChild?.id ?? null);
   const selected = children.find((c) => c.id === selectedId) ?? children[0] ?? null;
   const todayIso = toIsoDate(new Date());
+  const [place, setPlace] = useState<VaccinePlace>('clinic');
+  const [bookingVaccineId, setBookingVaccineId] = useState<string | null>(null);
+  const bookingDays = dayOptions(7);
+  const [bookingDate, setBookingDate] = useState(bookingDays[0].iso);
+  const [bookingTime, setBookingTime] = useState<string | null>(null);
+  const [payment, setPayment] = useState<PaymentMethod>('upi');
+  const [query, setQuery] = useState('');
+  const [processing, setProcessing] = useState(false);
+  const [timeError, setTimeError] = useState<string | null>(null);
+
+  const fee = vaccineVisitFee(place);
+
+  const slots = useMemo(() => {
+    const takenSlots = (vaccineBookings ?? [])
+      .filter((b) => b.status === 'confirmed' && b.place === place && b.date === bookingDate)
+      .map((b) => b.time)
+      .filter(Boolean) as string[];
+    return openSlots([...VACCINE_SLOTS], place, bookingDate, takenSlots);
+  }, [vaccineBookings, place, bookingDate]);
 
   const rows = useMemo<Row[]>(() => {
     if (!selected?.birthDate) return [];
-    const givenSet = new Set(vaccinesGiven);
-    return VACCINES.map((vaccine) => {
+    const givenSet = new Set(vaccinesGiven ?? []);
+    const q = query.trim().toLowerCase();
+    return VACCINES.filter(
+      (vaccine) =>
+        !q ||
+        vaccine.name.toLowerCase().includes(q) ||
+        vaccine.protects.toLowerCase().includes(q) ||
+        vaccine.dueLabel.toLowerCase().includes(q),
+    ).map((vaccine) => {
       const dueIso = dueDateFor(selected.birthDate as string, vaccine);
       const given = givenSet.has(`${selected.id}|${vaccine.id}`);
       return { vaccine, dueIso, status: vaccineStatus(given, dueIso, todayIso) };
     });
-  }, [selected, vaccinesGiven, todayIso]);
+  }, [selected, vaccinesGiven, todayIso, query]);
+
+  const dueRows = useMemo(() => rows.filter((r) => r.status === 'due'), [rows]);
+  const upcomingRows = useMemo(() => rows.filter((r) => r.status === 'upcoming'), [rows]);
+  const doneRows = useMemo(() => rows.filter((r) => r.status === 'done'), [rows]);
+  const vaccineChoices = useMemo(() => (dueRows.length ? dueRows : upcomingRows), [dueRows, upcomingRows]);
+  const vaccineChoiceKey = vaccineChoices.map((row) => row.vaccine.id).join('|');
+
+  const childBookings = useMemo(
+    () =>
+      (vaccineBookings ?? [])
+        .filter((b) => b.childId === selected?.id && b.status === 'confirmed')
+        .sort((a, b) => b.createdAt - a.createdAt),
+    [vaccineBookings, selected?.id],
+  );
+
+  // Keep a vaccine selected whenever the due/upcoming list changes.
+  useEffect(() => {
+    if (vaccineChoices.length === 0) {
+      setBookingVaccineId(null);
+      return;
+    }
+    if (!bookingVaccineId || !vaccineChoices.some((row) => row.vaccine.id === bookingVaccineId)) {
+      setBookingVaccineId(vaccineChoices[0].vaccine.id);
+    }
+  }, [vaccineChoiceKey, bookingVaccineId, vaccineChoices]);
+
+  // Keep an available time selected for the chosen day.
+  useEffect(() => {
+    const firstOpen = slots.find((slot) => slot.available)?.time ?? null;
+    if (!firstOpen) {
+      setBookingTime(null);
+      return;
+    }
+    if (!bookingTime || !slots.some((slot) => slot.time === bookingTime && slot.available)) {
+      setBookingTime(firstOpen);
+      setTimeError(null);
+    }
+  }, [slots, bookingTime]);
+
+  useEffect(() => {
+    if (!processing || !selected || !bookingVaccineId || !bookingTime) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      if (cancelled) return;
+      try {
+        const id = bookVaccine({
+          childId: selected.id,
+          vaccineId: bookingVaccineId,
+          place,
+          date: bookingDate,
+          time: bookingTime,
+          fee,
+          payment,
+        });
+        setProcessing(false);
+        router.push(`/vaccines/booking/${id}`);
+      } catch {
+        setProcessing(false);
+        showToast('Could not complete booking. Please try again.');
+      }
+    }, 900);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+    // Capture once when payment processing starts.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [processing]);
 
   if (children.length === 0) {
     return (
@@ -58,14 +175,29 @@ export default function VaccinesScreen() {
   }
 
   const givenCount = rows.filter((r) => r.status === 'done').length;
-  const dueRows = rows.filter((r) => r.status === 'due');
-  const upcomingRows = rows.filter((r) => r.status === 'upcoming');
-  const doneRows = rows.filter((r) => r.status === 'done');
+
+  const submitBooking = () => {
+    if (!selected) return;
+    if (vaccineChoices.length === 0) {
+      showToast('No vaccines available to book right now.');
+      return;
+    }
+    if (!bookingVaccineId) {
+      setTimeError('Pick a vaccine to continue.');
+      return;
+    }
+    if (!bookingTime) {
+      setTimeError('Pick a visit time to continue.');
+      return;
+    }
+    setTimeError(null);
+    setProcessing(true);
+  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Vaccinations" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         {children.length > 1 ? (
           <View style={styles.chips}>
             {children.map((child) => {
@@ -110,7 +242,7 @@ export default function VaccinesScreen() {
                 {ageLabel(selected.birthDate, todayIso)}  |  Born {formatIsoDate(selected.birthDate)}
               </Text>
               <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.round((givenCount / rows.length) * 100)}%` }]} />
+                <View style={[styles.progressFill, { width: `${Math.round((givenCount / Math.max(rows.length, 1)) * 100)}%` }]} />
               </View>
               <Text style={styles.summaryMeta}>
                 {givenCount} of {rows.length} given
@@ -124,6 +256,134 @@ export default function VaccinesScreen() {
               >
                 <Text style={styles.editText}>Change date of birth</Text>
               </Pressable>
+            </View>
+
+            <SearchField value={query} onChangeText={setQuery} placeholder="Search vaccine or disease" />
+
+            {childBookings.length > 0 ? (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Upcoming bookings</Text>
+                {childBookings.slice(0, 3).map((booking) => {
+                  const vaccine = VACCINES.find((v) => v.id === booking.vaccineId);
+                  return (
+                    <Pressable
+                      key={booking.id}
+                      onPress={() => router.navigate(`/vaccines/booking/${booking.id}`)}
+                      style={styles.bookingRow}
+                      accessibilityRole="button"
+                    >
+                      <View style={styles.bookingCopy}>
+                        <Text style={styles.bookingTitle}>{vaccine?.name ?? 'Vaccine'}</Text>
+                        <Text style={styles.bookingMeta}>
+                          {formatIsoDate(booking.date)} · {booking.time} · {booking.place === 'clinic' ? 'Clinic' : 'Home'}
+                        </Text>
+                      </View>
+                      <Text style={styles.bookingFee}>{formatINR(booking.fee ?? fee)}</Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+            ) : null}
+
+            <View style={styles.bookCard}>
+              <Text style={styles.cardTitle}>Book a vaccination visit</Text>
+              <Text style={styles.cardBody}>Pick place, date, time and pay to confirm the visit.</Text>
+
+              <Text style={styles.fieldLabel}>Visit type</Text>
+              <FilterChips
+                options={[
+                  { value: 'clinic', label: `Clinic · ${formatINR(vaccineVisitFee('clinic'))}` },
+                  { value: 'home', label: `At home · ${formatINR(vaccineVisitFee('home'))}` },
+                ]}
+                value={place}
+                onChange={(value) => {
+                  setPlace(value as VaccinePlace);
+                  setBookingTime(null);
+                }}
+              />
+              <View style={styles.placeRow}>
+                {place === 'clinic' ? <Hospital size={16} color={theme.strong} /> : <Home size={16} color={theme.strong} />}
+                <Text style={styles.placeHint}>
+                  {place === 'clinic' ? 'Visit a partner clinic for the shot' : 'Trained nurse visits your home'}
+                </Text>
+              </View>
+
+              <Text style={styles.fieldLabel}>Vaccine</Text>
+              {vaccineChoices.length === 0 ? (
+                <Text style={styles.emptyText}>No due or upcoming vaccines to book.</Text>
+              ) : (
+                <View style={styles.vaccineList}>
+                  {vaccineChoices.slice(0, 6).map((row) => {
+                    const active = bookingVaccineId === row.vaccine.id;
+                    return (
+                      <Pressable
+                        key={row.vaccine.id}
+                        onPress={() => {
+                          setBookingVaccineId(row.vaccine.id);
+                          setTimeError(null);
+                        }}
+                        style={[styles.vaccineOption, active && styles.vaccineOptionActive]}
+                        accessibilityRole="radio"
+                        accessibilityState={{ selected: active }}
+                      >
+                        <Text style={[styles.vaccineOptionTitle, active && styles.vaccineOptionTitleActive]}>
+                          {row.vaccine.name}
+                        </Text>
+                        <Text style={styles.vaccineOptionMeta}>
+                          {row.status === 'due' ? 'Due now' : `Due ${formatIsoDate(row.dueIso)}`}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              )}
+
+              <Text style={styles.fieldLabel}>Date</Text>
+              <DayPicker
+                value={bookingDate}
+                onChange={(iso) => {
+                  setBookingDate(iso);
+                  setBookingTime(null);
+                }}
+              />
+
+              <Text style={styles.fieldLabel}>Time</Text>
+              <SlotGrid
+                slots={slots}
+                value={bookingTime}
+                onChange={(time) => {
+                  setBookingTime(time);
+                  setTimeError(null);
+                }}
+              />
+              {timeError ? <Text style={styles.errorText}>{timeError}</Text> : null}
+
+              <Text style={styles.fieldLabel}>Payment</Text>
+              <FilterChips
+                options={PAYMENT_OPTIONS}
+                value={payment}
+                onChange={(value) => setPayment(value as PaymentMethod)}
+              />
+
+              <View style={styles.feeBox}>
+                <Text style={styles.feeLabel}>Visit fee</Text>
+                <Text style={styles.feeValue}>{formatINR(fee)}</Text>
+              </View>
+
+              <PrimaryButton
+                label={
+                  processing
+                    ? payment === 'cod'
+                      ? 'Confirming…'
+                      : 'Processing payment…'
+                    : payment === 'cod'
+                      ? `Book & pay ${formatINR(fee)} at visit`
+                      : `Pay ${formatINR(fee)} & book`
+                }
+                disabled={processing || vaccineChoices.length === 0}
+                loading={processing}
+                onPress={submitBooking}
+              />
             </View>
 
             <VaccineSection title="Due now" rows={dueRows} emptyText="Nothing is due right now." childId={selected.id} styles={styles} theme={theme} onToggle={toggleVaccineGiven} toast={showToast} />
@@ -263,6 +523,55 @@ function makeStyles(t: Palette) {
     chipActive: { backgroundColor: t.strong, borderColor: t.strong },
     chipText: { fontFamily: FONT.semibold, fontSize: 13, color: t.ink },
     chipTextActive: { color: t.card },
+    bookCard: {
+      padding: 16,
+      borderRadius: 18,
+      backgroundColor: t.card,
+      borderWidth: 1,
+      borderColor: t.border,
+      gap: 12,
+    },
+    fieldLabel: { fontFamily: FONT.bold, fontSize: 13, color: t.ink, marginTop: 4 },
+    placeRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    placeHint: { flex: 1, fontFamily: FONT.regular, fontSize: 13, color: t.muted },
+    vaccineList: { gap: 8 },
+    vaccineOption: {
+      padding: 12,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: t.border,
+      backgroundColor: t.background,
+      gap: 2,
+    },
+    vaccineOptionActive: { borderColor: t.strong, backgroundColor: t.secondary },
+    vaccineOptionTitle: { fontFamily: FONT.bold, fontSize: 14, color: t.ink },
+    vaccineOptionTitleActive: { color: t.strong },
+    vaccineOptionMeta: { fontFamily: FONT.regular, fontSize: 12, color: t.muted },
+    feeBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingVertical: 12,
+      paddingHorizontal: 14,
+      borderRadius: 14,
+      backgroundColor: t.secondary,
+    },
+    feeLabel: { fontFamily: FONT.semibold, fontSize: 14, color: t.muted },
+    feeValue: { fontFamily: FONT.bold, fontSize: 18, color: t.ink },
+    bookingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      padding: 14,
+      borderRadius: 16,
+      backgroundColor: t.card,
+      borderWidth: 1,
+      borderColor: t.border,
+    },
+    bookingCopy: { flex: 1, gap: 2 },
+    bookingTitle: { fontFamily: FONT.bold, fontSize: 14, color: t.ink },
+    bookingMeta: { fontFamily: FONT.regular, fontSize: 12, color: t.muted },
+    bookingFee: { fontFamily: FONT.bold, fontSize: 14, color: t.strong },
     card: {
       padding: 20,
       borderRadius: 18,

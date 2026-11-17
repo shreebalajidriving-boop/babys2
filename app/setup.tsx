@@ -73,7 +73,7 @@ export default function SetupScreen() {
             <TextInput
               value={parentName}
               onChangeText={setParentName}
-              placeholder="e.g. Priya"
+              placeholder="e.g. Shivi"
               placeholderTextColor={theme.muted}
               style={styles.input}
               maxLength={40}

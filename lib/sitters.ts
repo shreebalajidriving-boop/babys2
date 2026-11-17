@@ -97,8 +97,36 @@ export const SITTERS: Sitter[] = [
   },
 ];
 
-export const SITTER_SLOTS = ['7:00 AM', '9:00 AM', '11:00 AM', '1:00 PM', '3:00 PM', '5:00 PM', '7:00 PM'] as const;
-export const SITTER_DURATIONS = [2, 4, 6, 8] as const;
+export type SitterPlanOption = 'once' | 'week' | 'month';
+export type SitterSlotBand = 'morning' | 'afternoon' | 'night';
+
+export const SITTER_PLAN_OPTIONS: { value: SitterPlanOption; label: string; hint: string; multiplier: number }[] = [
+  { value: 'once', label: 'One day', hint: 'Single booking', multiplier: 1 },
+  { value: 'week', label: 'Weekly', hint: 'Same slot for 7 days', multiplier: 6.5 },
+  { value: 'month', label: 'Monthly', hint: 'Same slot for 30 days', multiplier: 24 },
+];
+
+export const SITTER_SLOT_BANDS: {
+  value: SitterSlotBand;
+  label: string;
+  hint: string;
+  slots: string[];
+}[] = [
+  { value: 'morning', label: 'Morning 6–12', hint: 'Early care and school drop', slots: ['6:00 AM', '8:00 AM', '10:00 AM'] },
+  { value: 'afternoon', label: 'Afternoon 12–6', hint: 'Naps, play and homework', slots: ['12:00 PM', '2:00 PM', '4:00 PM'] },
+  { value: 'night', label: 'Night 6–11', hint: 'Dinner, bath and bedtime', slots: ['6:00 PM', '8:00 PM', '9:00 PM'] },
+];
+
+export const SITTER_SLOTS = SITTER_SLOT_BANDS.flatMap((band) => band.slots);
+export const SITTER_DURATIONS = [2, 4, 6] as const;
+
+export function slotsForBand(band: SitterSlotBand) {
+  return SITTER_SLOT_BANDS.find((item) => item.value === band)?.slots ?? [];
+}
+
+export function planMultiplier(plan: SitterPlanOption) {
+  return SITTER_PLAN_OPTIONS.find((item) => item.value === plan)?.multiplier ?? 1;
+}
 export const SITTER_REQUIREMENTS = [
   'Bedtime routine',
   'Meal preparation',
@@ -134,6 +162,6 @@ export function endTimeFor(startTime: string, hours: number) {
   return formatHour(toHour24(startTime) + hours);
 }
 
-export function sitterTotal(hourlyRate: number, hours: number) {
-  return hourlyRate * hours;
+export function sitterTotal(hourlyRate: number, hours: number, plan: SitterPlanOption = 'once') {
+  return Math.round(hourlyRate * hours * planMultiplier(plan));
 }

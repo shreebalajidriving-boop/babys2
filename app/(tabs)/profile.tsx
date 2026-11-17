@@ -4,18 +4,38 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/AppContext';
-import { formatOrderDate, formatINR } from '@/lib/format';
 import { FONT, type Palette } from '@/lib/theme';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ThemePicker } from '@/components/ThemePicker';
 import { useToast } from '@/components/Toast';
 
 export default function ProfileTab() {
-  const { theme, parent, children, activeChild, orders, wishlist, membership, themeOverride, setActiveChild, setThemeOverride, signOut } =
-    useApp();
+  const {
+    theme,
+    parent,
+    children,
+    activeChild,
+    orders,
+    wishlist,
+    membership,
+    themeOverride,
+    appointments,
+    labBookings,
+    sitterBookings,
+    vaccineBookings,
+    setActiveChild,
+    setThemeOverride,
+    signOut,
+  } = useApp();
   const toast = useToast();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [confirmLogout, setConfirmLogout] = useState(false);
+
+  const careCount =
+    appointments.filter((a) => a.status !== 'cancelled').length +
+    labBookings.length +
+    (vaccineBookings ?? []).filter((b) => b.status !== 'cancelled').length +
+    sitterBookings.filter((b) => b.status !== 'cancelled').length;
 
   const initial = parent?.name.trim().charAt(0).toUpperCase() || 'B';
 
@@ -83,7 +103,16 @@ export default function ProfileTab() {
         <Section title="Activity">
           <LinkRow icon={Package} label="My orders" meta={`${orders.length} order${orders.length === 1 ? '' : 's'}`} onPress={() => router.navigate('/orders')} />
           <LinkRow icon={Heart} label="Wishlist" meta={`${wishlist.length} saved`} onPress={() => router.navigate('/wishlist')} />
-          <LinkRow icon={CalendarCheck} label="Appointments and tests" meta="Doctor visits and lab bookings" onPress={() => router.navigate('/bookings')} />
+          <LinkRow
+            icon={CalendarCheck}
+            label="Care bookings"
+            meta={
+              careCount
+                ? `${careCount} booking${careCount === 1 ? '' : 's'} · doctor, labs, vaccines, sitters`
+                : 'Doctor, lab tests, vaccines and babysitting'
+            }
+            onPress={() => router.navigate('/bookings')}
+          />
           <LinkRow icon={Crown} label="Baby Bliss Club" meta={membership ? 'Member benefits active' : 'Free delivery and member savings'} onPress={() => router.navigate('/membership')} />
           <LinkRow icon={ShieldCheck} label="Child insurance" meta="Health, accident and savings cover" onPress={() => router.navigate('/insurance')} />
           <LinkRow icon={PiggyBank} label="Child savings goals" meta="School, college and family goals" onPress={() => router.navigate('/savings')} />
@@ -162,7 +191,7 @@ function makeStyles(t: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
     content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, gap: 20 },
-    title: { fontFamily: FONT.bold, fontSize: 26, color: t.ink },
+    title: { fontFamily: FONT.bold, fontSize: 28, color: t.ink, letterSpacing: -0.4 },
     userCard: {
       flexDirection: 'row',
       alignItems: 'center',

@@ -57,7 +57,7 @@ export function createDemoState(): Partial<PersistedState> {
   const now = Date.now();
   return {
     onboarded: true,
-    parent: { name: 'Priya', phone: '9876543210', city: 'Mumbai' },
+    parent: { name: 'Shivi', phone: '9876543210', city: 'Mumbai' },
     children: [
       {
         id: childId,
@@ -85,13 +85,14 @@ export function createDemoState(): Partial<PersistedState> {
     appointments: [],
     labBookings: [],
     sitterBookings: [],
+    vaccineBookings: [],
     completedVideos: [],
     vaccinesGiven: [`${childId}|bcg`],
     assistantMessages: [
       {
         id: 'demo-msg-1',
         role: 'assistant',
-        text: 'Hi Priya! Ask me anything about Aria’s care, sleep, or feeding.',
+        text: 'Hi Shivi! Ask me anything about Aria’s care, sleep, or feeding.',
       },
     ],
     communityPosts: [],
@@ -124,12 +125,13 @@ export async function loadRemoteState(workspaceId: string): Promise<Partial<Pers
 export async function saveRemoteState(workspaceId: string, state: PersistedState): Promise<void> {
   saveLocalState(state);
   if (!supabase) return;
-  const { error } = await supabase.rpc('save_workspace_state', {
-    p_workspace_id: workspaceId,
-    p_state: state,
-  });
-  // Best-effort cloud sync: local save already succeeded. Missing RPCs should not block the UI.
-  if (error && !/Could not find the function|PGRST202|schema cache/i.test(error.message)) {
-    throw new Error(error.message);
+  try {
+    // Best-effort cloud sync only — local save is the source of truth for the UI.
+    await supabase.rpc('save_workspace_state', {
+      p_workspace_id: workspaceId,
+      p_state: state,
+    });
+  } catch {
+    // Ignore cloud failures; device storage already has the latest state.
   }
 }

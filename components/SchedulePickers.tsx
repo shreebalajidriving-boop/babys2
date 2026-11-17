@@ -1,4 +1,4 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useApp } from '@/lib/AppContext';
 import { dayOptions } from '@/lib/schedule';
 import { FONT } from '@/lib/theme';
@@ -7,7 +7,7 @@ export function DayPicker({ value, onChange }: { value: string; onChange: (iso: 
   const { theme } = useApp();
   const days = dayOptions(7);
   return (
-    <View style={styles.days}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.days}>
       {days.map((day) => {
         const active = day.iso === value;
         return (
@@ -27,7 +27,7 @@ export function DayPicker({ value, onChange }: { value: string; onChange: (iso: 
           </Pressable>
         );
       })}
-    </View>
+    </ScrollView>
   );
 }
 
@@ -75,9 +75,9 @@ export function SlotGrid({
 }
 
 const styles = StyleSheet.create({
-  days: { flexDirection: 'row', gap: 8 },
+  days: { flexDirection: 'row', gap: 8, paddingRight: 4 },
   day: {
-    flex: 1,
+    width: 64,
     alignItems: 'center',
     paddingVertical: 10,
     borderRadius: 16,
@@ -87,7 +87,14 @@ const styles = StyleSheet.create({
   dayWeek: { fontFamily: FONT.semibold, fontSize: 12 },
   dayNumber: { fontFamily: FONT.bold, fontSize: 18 },
   slots: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  slot: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, borderWidth: 1, minWidth: '30%', alignItems: 'center' },
-  slotDisabled: { opacity: 0.6 },
+  slot: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    minWidth: 96,
+    alignItems: 'center',
+  },
+  slotDisabled: { opacity: 0.45 },
   slotText: { fontFamily: FONT.semibold, fontSize: 13 },
 });

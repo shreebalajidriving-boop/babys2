@@ -50,6 +50,9 @@ export type LabBooking = {
   payment: PaymentMethod;
 };
 
+export type SitterPlan = 'once' | 'week' | 'month';
+export type SitterSlotBand = 'morning' | 'afternoon' | 'night';
+
 export type SitterBooking = {
   id: string;
   createdAt: number;
@@ -57,11 +60,27 @@ export type SitterBooking = {
   date: string;
   startTime: string;
   hours: number;
+  plan: SitterPlan;
+  slotBand: SitterSlotBand;
   childId: string;
   address: string;
   requirements: string[];
   notes: string;
   total: number;
+  payment: PaymentMethod;
+  status: 'confirmed' | 'cancelled';
+};
+
+export type VaccinePlace = 'clinic' | 'home';
+export type VaccineBooking = {
+  id: string;
+  createdAt: number;
+  childId: string;
+  vaccineId: string;
+  place: VaccinePlace;
+  date: string;
+  time: string;
+  fee: number;
   payment: PaymentMethod;
   status: 'confirmed' | 'cancelled';
 };
@@ -121,6 +140,7 @@ export type PersistedState = {
   appointments: Appointment[];
   labBookings: LabBooking[];
   sitterBookings: SitterBooking[];
+  vaccineBookings: VaccineBooking[];
   completedVideos: string[];
   vaccinesGiven: string[];
   assistantMessages: AssistantMessage[];

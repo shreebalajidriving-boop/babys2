@@ -1,18 +1,18 @@
 import { router } from 'expo-router';
 import {
   Bell,
-  BookOpen,
+  BookOpenCheck,
+  BotMessageSquare,
   ChevronRight,
-  HeartHandshake,
+  HeartPulse,
   MapPin,
   Search,
-  Shield,
+  ShieldPlus,
   ShoppingBag,
   ShoppingCart,
-  Sparkles,
-  Stethoscope,
   Syringe,
-  Users,
+  UsersRound,
+  Baby,
 } from 'lucide-react-native';
 import { useMemo, useRef, useState, type ComponentType } from 'react';
 import {
@@ -30,6 +30,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { useApp } from '@/lib/AppContext';
 import { PRODUCTS } from '@/lib/catalog';
+import { CITIES } from '@/lib/cities';
 import { toIsoDate } from '@/lib/schedule';
 import { FONT, type Palette } from '@/lib/theme';
 import { vaccineReminder } from '@/lib/vaccines';
@@ -79,21 +80,23 @@ const BANNERS: Banner[] = [
   },
 ];
 
+type ServiceIcon = ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
+
 type Service = {
   label: string;
-  icon: ComponentType<{ size?: number; color?: string }>;
+  icon: ServiceIcon;
   target: string;
 };
 
 const SERVICES: Service[] = [
   { label: 'Shop', icon: ShoppingBag, target: '/shop' },
-  { label: 'Doctors', icon: Stethoscope, target: '/care' },
+  { label: 'Doctors', icon: HeartPulse, target: '/care' },
   { label: 'Vaccines', icon: Syringe, target: '/vaccines' },
-  { label: 'Learn', icon: BookOpen, target: '/learn' },
-  { label: 'Insurance', icon: Shield, target: '/insurance' },
-  { label: 'Babysitters', icon: Users, target: '/babysitting' },
-  { label: 'Community', icon: HeartHandshake, target: '/community' },
-  { label: 'AI Help', icon: Sparkles, target: '/assistant' },
+  { label: 'Learn', icon: BookOpenCheck, target: '/learn' },
+  { label: 'Insurance', icon: ShieldPlus, target: '/insurance' },
+  { label: 'Babysitters', icon: Baby, target: '/babysitting' },
+  { label: 'Community', icon: UsersRound, target: '/community' },
+  { label: 'AI Help', icon: BotMessageSquare, target: '/assistant' },
 ];
 
 const LEARNING = [
@@ -112,7 +115,7 @@ const LEARNING = [
 ];
 
 export default function HomeScreen() {
-  const { theme, parent, cart, activeChild, vaccinesGiven } = useApp();
+  const { theme, parent, cart, activeChild, vaccinesGiven, updateParentCity } = useApp();
   const { width } = useWindowDimensions();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const cartCount = cart.reduce((sum, item) => sum + item.qty, 0);
@@ -140,10 +143,18 @@ export default function HomeScreen() {
             <Text style={styles.greeting}>
               {greeting(new Date())}, {firstName}
             </Text>
-            <View style={styles.locationRow}>
+            <Pressable
+              onPress={() => {
+                const index = Math.max(0, CITIES.indexOf((parent?.city as (typeof CITIES)[number]) ?? 'Mumbai'));
+                updateParentCity(CITIES[(index + 1) % CITIES.length]);
+              }}
+              style={styles.locationRow}
+              accessibilityRole="button"
+              accessibilityLabel="Change location"
+            >
               <MapPin size={14} color={theme.muted} />
-              <Text style={styles.location}>{parent?.city || 'Your city'}</Text>
-            </View>
+              <Text style={styles.location}>{parent?.city || 'Your city'} · tap to change</Text>
+            </Pressable>
           </View>
           <View style={styles.headerActions}>
             <Pressable
@@ -241,7 +252,7 @@ export default function HomeScreen() {
                   accessibilityRole="button"
                 >
                   <View style={styles.serviceIcon}>
-                    <Icon size={22} color={theme.strong} />
+                    <Icon size={24} color={theme.strong} strokeWidth={2.25} />
                   </View>
                   <Text style={styles.serviceLabel}>{service.label}</Text>
                 </Pressable>
@@ -274,7 +285,7 @@ export default function HomeScreen() {
               accessibilityRole="button"
             >
               <View style={styles.reminderIcon}>
-                <Syringe size={22} color={theme.strong} />
+                <Syringe size={22} color={theme.strong} strokeWidth={2.25} />
               </View>
               <View style={styles.reminderCopy}>
                 <Text style={styles.reminderTitle}>{reminder.title}</Text>
@@ -350,7 +361,7 @@ function makeStyles(t: Palette) {
     content: { paddingHorizontal: 20, paddingTop: 10, paddingBottom: 36, gap: 22 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     headerText: { flex: 1, gap: 4 },
-    greeting: { fontFamily: FONT.bold, fontSize: 24, color: t.ink, lineHeight: 30 },
+    greeting: { fontFamily: FONT.bold, fontSize: 26, color: t.ink, lineHeight: 32, letterSpacing: -0.3 },
     locationRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     location: { fontFamily: FONT.semibold, fontSize: 13, color: t.muted },
     headerActions: { flexDirection: 'row', gap: 10 },

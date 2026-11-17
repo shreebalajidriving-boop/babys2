@@ -4,6 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import { useFonts, Nunito_400Regular, Nunito_600SemiBold, Nunito_700Bold } from '@expo-google-fonts/nunito';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { AppProvider } from '@/lib/AppContext';
+import { AiHelpFab } from '@/components/AiHelpFab';
+import { AppShell } from '@/components/AppShell';
 import { ToastProvider } from '@/components/Toast';
 
 SplashScreen.preventAutoHideAsync();
@@ -30,13 +32,16 @@ export default function RootLayout() {
   return (
     <AppProvider>
       <ToastProvider>
-        <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
-          <Stack.Screen name="index" options={{ animation: 'fade' }} />
-          <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-          <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="dark" />
+        <AppShell>
+          <Stack screenOptions={{ headerShown: false, animation: 'slide_from_right' }}>
+            <Stack.Screen name="index" options={{ animation: 'fade' }} />
+            <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
+            <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <AiHelpFab />
+          <StatusBar style="dark" />
+        </AppShell>
       </ToastProvider>
     </AppProvider>
   );

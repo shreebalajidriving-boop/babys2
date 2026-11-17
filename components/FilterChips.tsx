@@ -1,6 +1,6 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import { useApp } from '@/lib/AppContext';
-import { FONT } from '@/lib/theme';
+import { FONT, RADIUS, SPACE } from '@/lib/theme';
 
 type Option<T extends string> = { value: T; label: string };
 
@@ -26,7 +26,10 @@ export function FilterChips<T extends string>({
             accessibilityState={{ selected: active }}
             style={[
               styles.chip,
-              { borderColor: active ? theme.strong : theme.border, backgroundColor: active ? theme.strong : theme.card },
+              {
+                borderColor: active ? theme.strong : theme.border,
+                backgroundColor: active ? theme.strong : theme.card,
+              },
             ]}
           >
             <Text style={[styles.label, { color: active ? '#FFFFFF' : theme.ink }]}>{option.label}</Text>
@@ -38,7 +41,12 @@ export function FilterChips<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  row: { gap: 8, paddingRight: 20 },
-  chip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, borderWidth: 1 },
-  label: { fontFamily: FONT.semibold, fontSize: 14 },
+  row: { gap: SPACE.sm, paddingRight: SPACE.pageX },
+  chip: {
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: RADIUS.pill,
+    borderWidth: 1,
+  },
+  label: { fontFamily: FONT.semibold, fontSize: 13 },
 });

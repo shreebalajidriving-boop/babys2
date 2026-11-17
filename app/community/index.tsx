@@ -11,6 +11,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { FilterChips } from '@/components/FilterChips';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
 
 const TOPIC_FILTERS: { value: 'all' | CommunityTopic; label: string }[] = [{ value: 'all', label: 'All' }, ...COMMUNITY_TOPICS];
 
@@ -18,32 +19,43 @@ export default function CommunityScreen() {
   const { theme, communityPosts, likedPostIds, toggleCommunityLike } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [topic, setTopic] = useState<'all' | CommunityTopic>('all');
+  const [query, setQuery] = useState('');
   const now = Date.now();
 
-  const posts = useMemo(
-    () =>
-      [...communityPosts, ...SEED_POSTS]
-        .filter((post) => topic === 'all' || post.topic === topic)
-        .sort((a, b) => b.createdAt - a.createdAt),
-    [communityPosts, topic],
-  );
+  const posts = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return [...communityPosts, ...SEED_POSTS]
+      .filter(
+        (post) =>
+          (topic === 'all' || post.topic === topic) &&
+          (!q ||
+            post.text.toLowerCase().includes(q) ||
+            post.authorName.toLowerCase().includes(q) ||
+            topicLabel(post.topic).toLowerCase().includes(q)),
+      )
+      .sort((a, b) => b.createdAt - a.createdAt);
+  }, [communityPosts, topic, query]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Community" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.intro}>Questions and tips from parents, grouped by what is on your mind.</Text>
 
         <PrimaryButton label="Write a post" onPress={() => router.navigate('/community/new')} />
+        <SearchField value={query} onChangeText={setQuery} placeholder="Search posts or parents" />
 
         <FilterChips options={TOPIC_FILTERS} value={topic} onChange={setTopic} />
 
         {posts.length === 0 ? (
           <EmptyState
-            title="No posts yet"
-            message="Be the first to share something on this topic."
+            title="No posts found"
+            message="Try another search or topic."
             actionLabel="Show all"
-            onAction={() => setTopic('all')}
+            onAction={() => {
+              setTopic('all');
+              setQuery('');
+            }}
           />
         ) : (
           <View style={styles.list}>

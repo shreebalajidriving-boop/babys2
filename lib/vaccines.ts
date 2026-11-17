@@ -1,5 +1,5 @@
 import { formatIsoDate, toIsoDate } from '@/lib/schedule';
-import type { Child } from '@/lib/types';
+import type { Child, VaccinePlace } from '@/lib/types';
 
 export type Vaccine = {
   id: string;
@@ -11,6 +11,21 @@ export type Vaccine = {
 
 export const VACCINE_DISCLAIMER =
   'This is a general routine schedule for tracking. Your child’s doctor may adjust timing and catch-up doses.';
+
+/** Visit time slots for clinic and home nurse bookings. */
+export const VACCINE_SLOTS = [
+  '09:00 AM',
+  '10:00 AM',
+  '11:30 AM',
+  '01:00 PM',
+  '03:00 PM',
+  '04:30 PM',
+  '06:00 PM',
+] as const;
+
+export function vaccineVisitFee(place: VaccinePlace) {
+  return place === 'home' ? 799 : 499;
+}
 
 export const VACCINES: Vaccine[] = [
   { id: 'bcg', name: 'BCG', protects: 'Tuberculosis', dueDays: 0, dueLabel: 'At birth' },

@@ -7,7 +7,7 @@
     "dev": "npx expo start",
     "web": "npx expo start --web",
     "build:web": "npx expo export --platform web",
-    "serve:web": "npx serve -s dist -l 3000",
+    "serve:web": "npx serve -s dist -l tcp://0.0.0.0:8080",
     "pm2:start": "npx pm2 start ecosystem.config.cjs",
     "pm2:stop": "npx pm2 stop nsg-web",
     "pm2:restart": "npx pm2 restart nsg-web",

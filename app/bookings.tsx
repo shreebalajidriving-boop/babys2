@@ -1,41 +1,67 @@
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { ChevronRight } from 'lucide-react-native';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/AppContext';
 import { getDoctor } from '@/lib/doctors';
+import { formatINR } from '@/lib/format';
 import { getLab, getLabTest } from '@/lib/labs';
 import { formatIsoDate } from '@/lib/schedule';
 import { getSitter } from '@/lib/sitters';
 import { FONT, type Palette } from '@/lib/theme';
+import { VACCINES } from '@/lib/vaccines';
 import { FilterChips } from '@/components/FilterChips';
+import { PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
 
-type Tab = 'appointments' | 'labs' | 'sitters';
+type Tab = 'appointments' | 'labs' | 'vaccines' | 'sitters';
 const TABS: { value: Tab; label: string }[] = [
   { value: 'appointments', label: 'Doctor visits' },
   { value: 'labs', label: 'Lab tests' },
+  { value: 'vaccines', label: 'Vaccinations' },
   { value: 'sitters', label: 'Babysitting' },
 ];
 
+function isTab(value: string | undefined): value is Tab {
+  return value === 'appointments' || value === 'labs' || value === 'vaccines' || value === 'sitters';
+}
+
 export default function BookingsScreen() {
-  const { theme, appointments, labBookings, sitterBookings, children } = useApp();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string }>();
+  const { theme, appointments, labBookings, sitterBookings, vaccineBookings, children } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
-  const [tab, setTab] = useState<Tab>('appointments');
+  const [tab, setTab] = useState<Tab>(isTab(tabParam) ? tabParam : 'appointments');
+
+  useEffect(() => {
+    if (isTab(tabParam)) setTab(tabParam);
+  }, [tabParam]);
 
   const childName = (id: string) => children.find((c) => c.id === id)?.name ?? '';
+  const vaccines = vaccineBookings ?? [];
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
-      <ScreenHeader title="My bookings" />
+      <ScreenHeader title="My care bookings" />
       <View style={styles.tabs}>
-        <FilterChips options={TABS} value={tab} onChange={setTab} />
+        <FilterChips
+          options={TABS}
+          value={tab}
+          onChange={(value) => {
+            setTab(value);
+            router.setParams({ tab: value });
+          }}
+        />
       </View>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {tab === 'appointments' ? (
           appointments.length === 0 ? (
-            <Text style={styles.empty}>No doctor visits yet. Book one from the Care tab.</Text>
+            <EmptyBlock
+              text="No doctor appointments yet."
+              actionLabel="Find a doctor"
+              onAction={() => router.navigate('/care')}
+              styles={styles}
+            />
           ) : (
             appointments.map((a) => {
               const doctor = getDoctor(a.doctorId);
@@ -63,7 +89,12 @@ export default function BookingsScreen() {
 
         {tab === 'labs' ? (
           labBookings.length === 0 ? (
-            <Text style={styles.empty}>No lab tests booked yet.</Text>
+            <EmptyBlock
+              text="No lab tests booked yet."
+              actionLabel="Browse lab tests"
+              onAction={() => router.navigate('/lab')}
+              styles={styles}
+            />
           ) : (
             labBookings.map((b) => (
               <Pressable key={b.id} onPress={() => router.navigate(`/lab/booking/${b.id}`)} style={styles.card} accessibilityRole="button">
@@ -79,9 +110,48 @@ export default function BookingsScreen() {
           )
         ) : null}
 
+        {tab === 'vaccines' ? (
+          vaccines.length === 0 ? (
+            <EmptyBlock
+              text="No vaccination visits booked yet."
+              actionLabel="Open vaccinations"
+              onAction={() => router.navigate('/vaccines')}
+              styles={styles}
+            />
+          ) : (
+            vaccines.map((b) => {
+              const vaccine = VACCINES.find((v) => v.id === b.vaccineId);
+              return (
+                <Pressable
+                  key={b.id}
+                  onPress={() => router.navigate(`/vaccines/booking/${b.id}`)}
+                  style={styles.card}
+                  accessibilityRole="button"
+                >
+                  <View style={styles.cardCopy}>
+                    <Text style={styles.title}>{vaccine?.name ?? 'Vaccination visit'}</Text>
+                    <Text style={styles.meta}>
+                      {formatIsoDate(b.date)}  |  {b.time || 'Time TBD'}  |  {b.place === 'clinic' ? 'Clinic' : 'Home'}  |  {childName(b.childId)}
+                    </Text>
+                    <Text style={styles.meta}>{formatINR(b.fee ?? (b.place === 'home' ? 799 : 499))}</Text>
+                  </View>
+                  <Text style={[styles.status, b.status === 'cancelled' && { color: theme.error }]}>
+                    {b.status === 'cancelled' ? 'Cancelled' : 'Confirmed'}
+                  </Text>
+                </Pressable>
+              );
+            })
+          )
+        ) : null}
+
         {tab === 'sitters' ? (
           sitterBookings.length === 0 ? (
-            <Text style={styles.empty}>No babysitting bookings yet. Find a sitter from the Care tab.</Text>
+            <EmptyBlock
+              text="No babysitting bookings yet."
+              actionLabel="Find a babysitter"
+              onAction={() => router.navigate('/babysitting')}
+              styles={styles}
+            />
           ) : (
             sitterBookings.map((b) => (
               <Pressable
@@ -108,12 +178,32 @@ export default function BookingsScreen() {
   );
 }
 
+function EmptyBlock({
+  text,
+  actionLabel,
+  onAction,
+  styles,
+}: {
+  text: string;
+  actionLabel: string;
+  onAction: () => void;
+  styles: ReturnType<typeof makeStyles>;
+}) {
+  return (
+    <View style={styles.emptyWrap}>
+      <Text style={styles.empty}>{text}</Text>
+      <PrimaryButton label={actionLabel} onPress={onAction} />
+    </View>
+  );
+}
+
 function makeStyles(t: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
     tabs: { paddingHorizontal: 20, paddingBottom: 12 },
     content: { paddingHorizontal: 20, paddingBottom: 32, gap: 12 },
-    empty: { fontFamily: FONT.regular, fontSize: 15, color: t.muted, textAlign: 'center', marginTop: 40 },
+    emptyWrap: { gap: 16, marginTop: 32 },
+    empty: { fontFamily: FONT.regular, fontSize: 15, color: t.muted, textAlign: 'center' },
     card: {
       flexDirection: 'row',
       alignItems: 'center',

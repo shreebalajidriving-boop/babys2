@@ -5,7 +5,13 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useApp } from '@/lib/AppContext';
 import { formatINR } from '@/lib/format';
-import { getInsurancePlan, INSURANCE_FREQUENCY_OPTIONS, premiumFor, type InsurancePlan } from '@/lib/insurance';
+import {
+  getInsuranceCompany,
+  getInsurancePlan,
+  INSURANCE_FREQUENCY_OPTIONS,
+  premiumFor,
+  type InsurancePlan,
+} from '@/lib/insurance';
 import { FONT, type Palette } from '@/lib/theme';
 import type { InsuranceFrequency } from '@/lib/types';
 import { EmptyState } from '@/components/EmptyState';
@@ -39,6 +45,7 @@ export default function InsurancePlanScreen() {
 function PlanDetail({ plan }: { plan: InsurancePlan }) {
   const { theme } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const company = getInsuranceCompany(plan.companyId);
   const [cover, setCover] = useState(plan.coverOptions[0]);
   const [frequency, setFrequency] = useState<InsuranceFrequency>('monthly');
   const premium = premiumFor(plan, cover, frequency);
@@ -49,8 +56,14 @@ function PlanDetail({ plan }: { plan: InsurancePlan }) {
       <ScreenHeader title={plan.category} />
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.hero}>
+          <Text style={styles.company}>{company?.name ?? 'Insurer'} · {plan.category}</Text>
           <Text style={styles.name}>{plan.name}</Text>
           <Text style={styles.summary}>{plan.summary}</Text>
+          <PrimaryButton
+            label="Compare this cover with other companies"
+            variant="outline"
+            onPress={() => router.navigate(`/insurance/compare?type=${plan.typeId}`)}
+          />
         </View>
 
         <View style={styles.section}>
@@ -93,6 +106,7 @@ function makeStyles(t: Palette) {
     safe: { flex: 1, backgroundColor: t.background },
     content: { paddingHorizontal: 20, paddingBottom: 32, gap: 24 },
     hero: { gap: 8 },
+    company: { fontFamily: FONT.semibold, fontSize: 13, color: t.strong },
     name: { fontFamily: FONT.bold, fontSize: 24, color: t.ink, lineHeight: 30 },
     summary: { fontFamily: FONT.regular, fontSize: 14, color: t.muted, lineHeight: 21 },
     section: { gap: 12 },

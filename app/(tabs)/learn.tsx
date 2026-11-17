@@ -8,6 +8,7 @@ import { useApp } from '@/lib/AppContext';
 import { LEARNING_ITEMS, type LearningItem } from '@/lib/learning';
 import { FONT, type Palette } from '@/lib/theme';
 import { FilterChips } from '@/components/FilterChips';
+import { SearchField } from '@/components/SearchField';
 
 const AGE_OPTIONS = AGE_GROUPS.map((group) => ({ value: group, label: group }));
 
@@ -15,8 +16,14 @@ export default function LearnTab() {
   const { theme, activeChild, completedVideos } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [ageGroup, setAgeGroup] = useState<string>(activeChild?.ageGroup ?? AGE_GROUPS[0]);
+  const [query, setQuery] = useState('');
 
-  const items = LEARNING_ITEMS.filter((item) => item.ageGroup === ageGroup);
+  const q = query.trim().toLowerCase();
+  const items = LEARNING_ITEMS.filter(
+    (item) =>
+      item.ageGroup === ageGroup &&
+      (!q || item.title.toLowerCase().includes(q) || item.skill.toLowerCase().includes(q) || item.kind.toLowerCase().includes(q)),
+  );
   const completedAll = LEARNING_ITEMS.filter((item) => completedVideos.includes(item.id));
   const minutesDone = completedAll.reduce((sum, item) => sum + item.minutes, 0);
   const percent = Math.round((completedAll.length / LEARNING_ITEMS.length) * 100);
@@ -41,6 +48,8 @@ export default function LearnTab() {
             {completedAll.length} of {LEARNING_ITEMS.length} completed  |  {minutesDone} minutes of play
           </Text>
         </View>
+
+        <SearchField value={query} onChangeText={setQuery} placeholder="Search activities or skills" />
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Age group</Text>
@@ -107,8 +116,8 @@ function makeStyles(t: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
     content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, gap: 20 },
-    title: { fontFamily: FONT.bold, fontSize: 26, color: t.ink },
-    subtitle: { fontFamily: FONT.regular, fontSize: 14, color: t.muted, marginTop: 2 },
+    title: { fontFamily: FONT.bold, fontSize: 28, color: t.ink, letterSpacing: -0.4 },
+    subtitle: { fontFamily: FONT.regular, fontSize: 14, color: t.muted, marginTop: 4, lineHeight: 20 },
     progressCard: { padding: 18, borderRadius: 20, backgroundColor: t.secondary, gap: 10 },
     progressTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
     progressTitle: { fontFamily: FONT.bold, fontSize: 16, color: t.ink },

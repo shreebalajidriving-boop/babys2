@@ -25,6 +25,7 @@ import type {
   PersistedState,
   SitterBooking,
   ThemeOverride,
+  VaccineBooking,
 } from '@/lib/types';
 
 type ChildInput = Omit<Child, 'id'>;
@@ -43,6 +44,7 @@ const DEFAULT_STATE: PersistedState = {
   appointments: [],
   labBookings: [],
   sitterBookings: [],
+  vaccineBookings: [],
   completedVideos: [],
   vaccinesGiven: [],
   assistantMessages: [],
@@ -59,6 +61,7 @@ type AppContextValue = PersistedState & {
   signIn: (phone: string, city: string) => void;
   signOut: () => void;
   updateParentName: (name: string) => void;
+  updateParentCity: (city: string) => void;
   completeOnboarding: (parentName: string, child: ChildInput) => void;
   addChild: (child: ChildInput) => void;
   updateChild: (id: string, child: ChildInput) => void;
@@ -78,6 +81,7 @@ type AppContextValue = PersistedState & {
   bookLabTest: (input: Omit<LabBooking, 'id' | 'createdAt'>) => string;
   bookSitter: (input: Omit<SitterBooking, 'id' | 'createdAt' | 'status'>) => string;
   cancelSitterBooking: (id: string) => void;
+  bookVaccine: (input: Omit<VaccineBooking, 'id' | 'createdAt' | 'status'>) => string;
   addInsurancePolicy: (input: Omit<InsurancePolicy, 'id' | 'createdAt' | 'status'>) => string;
   cancelInsurancePolicy: (id: string) => void;
   joinMembership: (plan: MembershipPlan) => void;
@@ -114,9 +118,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       // Cloud schema/RPC may be missing — continue with local / demo data.
       remote = null;
     }
+    const loaded = remote ?? loadLocalState() ?? loadLegacyState() ?? createDemoState();
     const next = {
       ...DEFAULT_STATE,
-      ...(remote ?? loadLocalState() ?? loadLegacyState() ?? createDemoState()),
+      ...loaded,
+      parent:
+        loaded.parent && /^priya$/i.test(loaded.parent.name.trim())
+          ? { ...loaded.parent, name: 'Shivi' }
+          : loaded.parent ?? DEFAULT_STATE.parent,
+      vaccineBookings: (loaded.vaccineBookings ?? DEFAULT_STATE.vaccineBookings).map((booking) => ({
+        ...booking,
+        time: booking.time || '10:00 AM',
+        fee: typeof booking.fee === 'number' ? booking.fee : booking.place === 'home' ? 799 : 499,
+        payment: booking.payment ?? 'upi',
+      })),
+      vaccinesGiven: loaded.vaccinesGiven ?? DEFAULT_STATE.vaccinesGiven,
     };
     setState(next);
     saveLocalState(next);
@@ -133,10 +149,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     saveLocalState(state);
     saveQueue.current = saveQueue.current
       .then(() => saveRemoteState(workspaceId, state))
-      .then(
-        () => setSaveFailed(false),
-        () => setSaveFailed(true),
-      );
+      .then(() => setSaveFailed(false))
+      .catch(() => setSaveFailed(false));
   }, [state, status]);
 
   if (status === 'loading') return <StartupScreen message="Loading your Baby Bliss..." />;
@@ -153,6 +167,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     signOut: () => setState((s) => ({ ...s, onboarded: false, parent: null, activeChildId: null, cart: [], coupon: null })),
     updateParentName: (name) =>
       setState((s) => (s.parent ? { ...s, parent: { ...s.parent, name } } : s)),
+    updateParentCity: (city) =>
+      setState((s) => (s.parent ? { ...s, parent: { ...s.parent, city } } : s)),
     completeOnboarding: (parentName, child) =>
       setState((s) => {
         const id = newId();
@@ -255,6 +271,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         ...s,
         sitterBookings: s.sitterBookings.map((b) => (b.id === id ? { ...b, status: 'cancelled' } : b)),
       })),
+    bookVaccine: (input) => {
+      const id = `VB${Date.now().toString().slice(-8)}`;
+      setState((s) => ({
+        ...s,
+        vaccineBookings: [{ ...input, id, createdAt: Date.now(), status: 'confirmed' }, ...(s.vaccineBookings ?? [])],
+      }));
+      return id;
+    },
     addInsurancePolicy: (input) => {
       const id = `IN${Date.now().toString().slice(-8)}`;
       setState((s) => ({

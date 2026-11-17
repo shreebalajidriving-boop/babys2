@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { CalendarCheck, ChevronRight, FlaskConical, Star, Baby, Sparkles, Syringe, Users } from 'lucide-react-native';
+import { CalendarCheck, ChevronRight, FlaskConical, Sparkles, Star, Users } from 'lucide-react-native';
 import { useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { formatINR } from '@/lib/format';
 import { FONT, type Palette } from '@/lib/theme';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterChips } from '@/components/FilterChips';
+import { SearchField } from '@/components/SearchField';
 
 type SortKey = 'rating' | 'fee' | 'experience';
 
@@ -28,15 +29,24 @@ export default function CareTab() {
   const styles = useMemo(() => makeStyles(theme), [theme]);
   const [specialty, setSpecialty] = useState<string>('all');
   const [sort, setSort] = useState<SortKey>('rating');
+  const [query, setQuery] = useState('');
 
   const doctors = useMemo(() => {
-    const filtered = DOCTORS.filter((d) => specialty === 'all' || d.specialty === specialty);
+    const q = query.trim().toLowerCase();
+    const filtered = DOCTORS.filter(
+      (d) =>
+        (specialty === 'all' || d.specialty === specialty) &&
+        (!q ||
+          d.name.toLowerCase().includes(q) ||
+          d.specialty.toLowerCase().includes(q) ||
+          d.clinic.toLowerCase().includes(q)),
+    );
     return [...filtered].sort((a, b) => {
       if (sort === 'fee') return a.onlineFee - b.onlineFee;
       if (sort === 'experience') return b.experience - a.experience;
       return b.rating - a.rating;
     });
-  }, [specialty, sort]);
+  }, [specialty, sort, query]);
 
   const upcoming = appointments.filter((a) => a.status === 'confirmed').length;
 
@@ -44,9 +54,9 @@ export default function CareTab() {
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View>
-          <Text style={styles.title}>Baby Care</Text>
+          <Text style={styles.title}>Doctors</Text>
           <Text style={styles.subtitle}>
-            Doctors and lab tests for {activeChild?.name ?? 'your little one'}
+            Clinic or online consults for {activeChild?.name ?? 'your little one'}
           </Text>
         </View>
 
@@ -67,28 +77,6 @@ export default function CareTab() {
           </Pressable>
         </View>
 
-        <Pressable onPress={() => router.navigate('/babysitting')} style={styles.banner} accessibilityRole="button">
-          <View style={[styles.actionIcon, { backgroundColor: theme.secondary }]}>
-            <Baby size={20} color={theme.strong} />
-          </View>
-          <View style={styles.bannerCopy}>
-            <Text style={styles.actionTitle}>Babysitters</Text>
-            <Text style={styles.actionMeta}>Verified sitters for a few hours or an evening</Text>
-          </View>
-          <ChevronRight size={18} color={theme.muted} />
-        </Pressable>
-
-        <Pressable onPress={() => router.navigate('/vaccines')} style={styles.banner} accessibilityRole="button">
-          <View style={[styles.actionIcon, { backgroundColor: theme.secondary }]}>
-            <Syringe size={20} color={theme.strong} />
-          </View>
-          <View style={styles.bannerCopy}>
-            <Text style={styles.actionTitle}>Vaccinations</Text>
-            <Text style={styles.actionMeta}>Routine schedule, due dates and records</Text>
-          </View>
-          <ChevronRight size={18} color={theme.muted} />
-        </Pressable>
-
         <View style={styles.actions}>
           <Pressable onPress={() => router.navigate('/assistant')} style={styles.actionCard} accessibilityRole="button">
             <View style={[styles.actionIcon, { backgroundColor: theme.secondary }]}>
@@ -108,12 +96,21 @@ export default function CareTab() {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Find a doctor</Text>
+          <SearchField value={query} onChangeText={setQuery} placeholder="Search doctor, specialty or clinic" />
           <FilterChips options={SPECIALTIES} value={specialty} onChange={setSpecialty} />
           <FilterChips options={SORTS} value={sort} onChange={setSort} />
         </View>
 
         {doctors.length === 0 ? (
-          <EmptyState title="No doctors found" message="Try another specialty." actionLabel="Show all" onAction={() => setSpecialty('all')} />
+          <EmptyState
+            title="No doctors found"
+            message="Try another search or specialty."
+            actionLabel="Clear search"
+            onAction={() => {
+              setSpecialty('all');
+              setQuery('');
+            }}
+          />
         ) : (
           <View style={styles.list}>
             {doctors.map((doctor) => (
@@ -156,8 +153,8 @@ function makeStyles(t: Palette) {
   return StyleSheet.create({
     safe: { flex: 1, backgroundColor: t.background },
     content: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 32, gap: 20 },
-    title: { fontFamily: FONT.bold, fontSize: 26, color: t.ink },
-    subtitle: { fontFamily: FONT.regular, fontSize: 14, color: t.muted, marginTop: 2 },
+    title: { fontFamily: FONT.bold, fontSize: 28, color: t.ink, letterSpacing: -0.4 },
+    subtitle: { fontFamily: FONT.regular, fontSize: 14, color: t.muted, marginTop: 4, lineHeight: 20 },
     actions: { flexDirection: 'row', gap: 12 },
     actionCard: {
       flex: 1,
@@ -171,17 +168,6 @@ function makeStyles(t: Palette) {
     actionIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
     actionTitle: { fontFamily: FONT.bold, fontSize: 15, color: t.ink },
     actionMeta: { fontFamily: FONT.regular, fontSize: 12, color: t.muted },
-    banner: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-      padding: 16,
-      borderRadius: 18,
-      backgroundColor: t.card,
-      borderWidth: 1,
-      borderColor: t.border,
-    },
-    bannerCopy: { flex: 1, gap: 2 },
     section: { gap: 12 },
     sectionTitle: { fontFamily: FONT.bold, fontSize: 18, color: t.ink },
     list: { gap: 12 },
@@ -204,6 +190,5 @@ function makeStyles(t: Palette) {
     ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 4 },
     rating: { fontFamily: FONT.semibold, fontSize: 12, color: t.ink },
     fee: { fontFamily: FONT.bold, fontSize: 13, color: t.ink },
-    chevron: { color: t.muted },
   });
 }

@@ -11,6 +11,7 @@ import { AGE_GROUPS } from '@/components/ChildForm';
 import { EmptyState } from '@/components/EmptyState';
 import { FilterChips } from '@/components/FilterChips';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
 
 type SortKey = 'rating' | 'rate' | 'experience';
 
@@ -36,25 +37,32 @@ export default function BabysittingListScreen() {
   const [age, setAge] = useState('all');
   const [cert, setCert] = useState('any');
   const [sort, setSort] = useState<SortKey>('rating');
+  const [query, setQuery] = useState('');
 
   const sitters = useMemo(() => {
+    const q = query.trim().toLowerCase();
     const filtered = SITTERS.filter(
       (s) =>
         (age === 'all' || s.ageGroups.some((group) => group === age)) &&
-        (cert === 'any' || s.cprCertified),
+        (cert === 'any' || s.cprCertified) &&
+        (!q ||
+          s.name.toLowerCase().includes(q) ||
+          s.languages.some((lang) => lang.toLowerCase().includes(q)) ||
+          s.about.toLowerCase().includes(q)),
     );
     return [...filtered].sort((a, b) => {
       if (sort === 'rate') return a.hourlyRate - b.hourlyRate;
       if (sort === 'experience') return b.experience - a.experience;
       return b.rating - a.rating;
     });
-  }, [age, cert, sort]);
+  }, [age, cert, sort, query]);
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Babysitters" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.intro}>Trusted, background-checked sitters for a few hours or an evening.</Text>
+        <SearchField value={query} onChangeText={setQuery} placeholder="Search sitter, language or skills" />
 
         <View style={styles.filters}>
           <FilterChips options={AGE_OPTIONS} value={age} onChange={setAge} />
@@ -65,11 +73,12 @@ export default function BabysittingListScreen() {
         {sitters.length === 0 ? (
           <EmptyState
             title="No sitters match"
-            message="Try a different age group or remove the certification filter."
-            actionLabel="Reset filters"
+            message="Try a different search or age group."
+            actionLabel="Reset"
             onAction={() => {
               setAge('all');
               setCert('any');
+              setQuery('');
             }}
           />
         ) : (

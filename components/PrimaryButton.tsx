@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { useApp } from '@/lib/AppContext';
-import { FONT } from '@/lib/theme';
+import { FONT, RADIUS } from '@/lib/theme';
 
 type Props = {
   label: string;
@@ -40,15 +40,16 @@ export function PrimaryButton({ label, onPress, variant = 'solid', disabled, loa
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 52,
-    borderRadius: 16,
-    paddingHorizontal: 24,
+    minHeight: 50,
+    borderRadius: RADIUS.lg,
+    paddingHorizontal: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   label: {
     fontFamily: FONT.bold,
-    fontSize: 16,
+    fontSize: 15,
+    letterSpacing: 0.1,
   },
   disabled: { opacity: 0.5 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

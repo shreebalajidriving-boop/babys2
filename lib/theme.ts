@@ -68,3 +68,24 @@ export const FONT = {
   semibold: 'Nunito-SemiBold',
   bold: 'Nunito-Bold',
 } as const;
+
+/** Shared layout rhythm used across screens. */
+export const SPACE = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 20,
+  xxl: 28,
+  pageX: 20,
+  pageY: 12,
+  section: 20,
+} as const;
+
+export const RADIUS = {
+  sm: 10,
+  md: 14,
+  lg: 18,
+  xl: 24,
+  pill: 999,
+} as const;

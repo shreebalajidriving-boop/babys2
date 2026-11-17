@@ -1,11 +1,12 @@
 import { router } from 'expo-router';
 import { ChevronRight, PiggyBank } from 'lucide-react-native';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { EmptyState } from '@/components/EmptyState';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { ScreenHeader } from '@/components/ScreenHeader';
+import { SearchField } from '@/components/SearchField';
 import { useApp } from '@/lib/AppContext';
 import { formatINR } from '@/lib/format';
 import { SAVINGS_DISCLAIMER, savedTotal, savingsProgress } from '@/lib/savings';
@@ -15,11 +16,18 @@ import type { SavingsGoal } from '@/lib/types';
 export default function SavingsScreen() {
   const { theme, savingsGoals, children } = useApp();
   const styles = useMemo(() => makeStyles(theme), [theme]);
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const visible = savingsGoals.filter((goal) => {
+    if (!q) return true;
+    const childName = children.find((c) => c.id === goal.childId)?.name ?? '';
+    return goal.name.toLowerCase().includes(q) || childName.toLowerCase().includes(q);
+  });
 
   return (
     <SafeAreaView style={styles.safe} edges={['top', 'bottom']}>
       <ScreenHeader title="Child savings goals" />
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
         <Text style={styles.intro}>Set a target for school, college or a family goal, and track how close you are.</Text>
 
         {savingsGoals.length === 0 ? (
@@ -32,7 +40,8 @@ export default function SavingsScreen() {
           />
         ) : (
           <View style={styles.list}>
-            {savingsGoals.map((goal) => (
+            <SearchField value={query} onChangeText={setQuery} placeholder="Search goal or child" />
+            {visible.map((goal) => (
               <GoalCard
                 key={goal.id}
                 goal={goal}
@@ -41,6 +50,7 @@ export default function SavingsScreen() {
                 theme={theme}
               />
             ))}
+            {visible.length === 0 ? <Text style={styles.intro}>No goals match that search.</Text> : null}
             <PrimaryButton label="New goal" variant="outline" onPress={() => router.navigate('/savings/new')} />
           </View>
         )}
